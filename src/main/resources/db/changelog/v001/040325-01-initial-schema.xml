@@ -1,0 +1,118 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="040325-initial-schema" author="Bulat">
+        <!-- ENUM -->
+        <sql>
+            CREATE TYPE account_status AS ENUM ('OPEN', 'CLOSED');
+            CREATE TYPE currency_type AS ENUM ('RUB', 'EUR', 'USD');
+            CREATE TYPE transaction_type AS ENUM ('DEPOSIT', 'TRANSFER', 'WITHDRAWAL');
+            CREATE TYPE transaction_status AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
+        </sql>
+
+        <!-- Таблица клиентов -->
+        <createTable tableName="clients">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="full_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="phone_number" type="VARCHAR(20)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="inn" type="VARCHAR(20)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="passport_scan_copy" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Таблица счетов -->
+        <createTable tableName="accounts">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="account_number" type="VARCHAR(20)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="balance" type="NUMERIC(15,2)" defaultValue="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="account_status">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bik" type="VARCHAR(9)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="currency_type">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="BIGINT">
+                <constraints foreignKeyName="fk_account_client"
+                             referencedTableName="clients"
+                             referencedColumnNames="id"
+                             nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Таблица транзакций -->
+        <createTable tableName="transactions">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="amount" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="transaction_type">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="transaction_status">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_account_id" type="BIGINT">
+                <constraints foreignKeyName="fk_transaction_from_account"
+                             referencedTableName="accounts"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="to_account_id" type="BIGINT">
+                <constraints foreignKeyName="fk_transaction_to_account"
+                             referencedTableName="accounts"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Индексы для таблицы клиентов -->
+        <createIndex tableName="clients" indexName="idx_clients_full_name">
+            <column name="full_name"/>
+        </createIndex>
+
+        <!-- Индексы для таблицы счетов -->
+        <createIndex tableName="accounts" indexName="idx_accounts_client_id">
+            <column name="client_id"/>
+        </createIndex>
+
+        <!-- Индексы для транзакций -->
+        <createIndex tableName="transactions" indexName="idx_transactions_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="transactions" indexName="idx_transactions_from_account">
+            <column name="from_account_id"/>
+        </createIndex>
+        <createIndex tableName="transactions" indexName="idx_transactions_to_account">
+            <column name="to_account_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

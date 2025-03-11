@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="040325-02-triggers" author="Bulat">
+        <sql>
+        <![CDATA[
+            CREATE OR REPLACE FUNCTION check_account_status()
+        RETURNS TRIGGER AS $$
+            BEGIN
+            IF OLD.status = 'CLOSED' THEN
+                RAISE EXCEPTION 'Operation prohibited: Account % is closed', OLD.id;
+            END IF;
+            RETURN NEW;
+            END;
+        $$ LANGUAGE plpgsql;
+            ]]>
+    </sql>
+
+        <sql>
+            CREATE TRIGGER trg_account_update
+                BEFORE UPDATE ON accounts
+                FOR EACH ROW
+                EXECUTE FUNCTION check_account_status();
+        </sql>
+
+        <rollback>
+            <sql>DROP TRIGGER IF EXISTS trg_account_update ON accounts;</sql>
+            <sql>DROP FUNCTION IF EXISTS check_account_status();</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

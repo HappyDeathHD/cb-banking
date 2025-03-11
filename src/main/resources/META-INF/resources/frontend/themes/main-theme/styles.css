@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Vaadin+Icons&display=swap');
+.main-header {
+    width: 100%;
+    padding: 0 2rem;
+    background: linear-gradient(90deg, #2c3e50, #3498db);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    height: 72px;
+}
+
+.header-content {
+    align-items: center;
+    height: 100%;
+}
+
+.logo {
+    height: 50px;
+    transition: transform 0.2s;
+}
+
+.logo:hover {
+    transform: scale(1.2);
+}
+
+.nav-container {
+    gap: 1.5rem;
+}
+
+.nav-button {
+    text-decoration: none !important;
+    color: white !important;
+    font-weight: 500;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.nav-button::part(link) {
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+.nav-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.nav-button.router-link-active {
+    background: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+}
+
+.nav-button.router-link-active:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
+:host ::slotted(.nav-button[active])::part(button) {
+    background: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+}
+
+:host ::slotted(.nav-button[active])::part(label) {
+    color: #fff !important;
+}
+
+.vaadin-router-link {
+    text-decoration: none !important;
+    outline: none;
+}
+
+.vaadin-router-link:focus {
+    box-shadow: none !important;
+}
