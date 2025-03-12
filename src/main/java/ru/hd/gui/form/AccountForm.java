@@ -12,6 +12,8 @@ import ru.hd.jpa.Account;
 import ru.hd.model.Currency;
 import ru.hd.util.ValidationPattern;
 
+import java.math.BigDecimal;
+
 public class AccountForm extends FormLayout {
     private final Binder<Account> binder = new Binder<>(Account.class);
     private Account account;
@@ -36,7 +38,7 @@ public class AccountForm extends FormLayout {
         bikField.setRequiredIndicatorVisible(true);
 
         currencyComboBox.setWidthFull();
-        setupComboBox(currencyComboBox,Currency.values());
+        setupComboBox(currencyComboBox, Currency.values());
     }
 
     private <T> void setupComboBox(ComboBox<T> comboBox, T[] items) {
@@ -63,7 +65,7 @@ public class AccountForm extends FormLayout {
 
         binder.forField(bikField)
                 .asRequired("БИК обязателен")
-                 .withValidator(value -> ValidationPattern.BIK.matcher(value).matches(),
+                .withValidator(value -> ValidationPattern.BIK.matcher(value).matches(),
                         "БИК должен содержать 9 цифр и начинаться на 04")
                 .bind(Account::getBik, Account::setBik);
 
@@ -85,6 +87,7 @@ public class AccountForm extends FormLayout {
     public void setAccount(Account account) {
         this.account = account;
         binder.readBean(account);
+        updateComboBoxState();
     }
 
     @Getter
@@ -105,5 +108,12 @@ public class AccountForm extends FormLayout {
 
     public void addSaveListener(ComponentEventListener<SaveEvent> listener) {
         addListener(SaveEvent.class, listener);
+    }
+
+    private void updateComboBoxState() {
+        boolean isBalanceZero = account != null
+                && account.getBalance() != null
+                && account.getBalance().compareTo(BigDecimal.ZERO) == 0;
+        currencyComboBox.setEnabled(isBalanceZero);
     }
 }

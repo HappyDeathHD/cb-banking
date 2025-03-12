@@ -218,6 +218,28 @@ class AccountServiceTest {
     }
 
     @Test
+    void testUpdateNotEmptyWithAnotherCurrency() {
+        try (Session session = getNewSession()) {
+            Client client = createTestClient(session);
+            Account account = createTestAccount(client, TestDataGenerator.generateAccountNumber());
+            account.setBalance(BigDecimal.TEN);
+            session.persist(account);
+            session.getTransaction().commit();
+
+
+            Account updatedAccount = new Account();
+            updatedAccount.setId(account.getId());
+            updatedAccount.setAccountNumber(account.getAccountNumber());
+            updatedAccount.setBik(account.getBik());
+            updatedAccount.setCurrency(Currency.USD);
+            updatedAccount.setClient(client);
+
+            assertThrows(InvalidCurrencyException.class,
+                    () -> accountService.updateAccount(session, updatedAccount));
+        }
+    }
+
+    @Test
     void testSuccessfulAccountClosure() throws BankingOperationException {
         try (Session session = getNewSession()) {
             Client client = createTestClient(session);
@@ -295,7 +317,6 @@ class AccountServiceTest {
                 .phoneNumber(TestDataGenerator.generateUniquePhone())
                 .inn(TestDataGenerator.generateUniqueINN())
                 .address("ул. Тестовая, 1")
-                .passportScanCopy("scan.jpg")
                 .build();
 
         session.persist(client);

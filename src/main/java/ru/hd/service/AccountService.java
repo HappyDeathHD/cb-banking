@@ -110,6 +110,7 @@ public class AccountService extends SessionService {
     }
 
     public List<Account> getAccounts(Session session, int offset, int limit) {
+        validateSession(session);
             return session.createQuery(
                             "SELECT a FROM Account a JOIN FETCH a.client", Account.class)
                     .setFirstResult(offset)
@@ -118,12 +119,14 @@ public class AccountService extends SessionService {
     }
 
     public List<Account> getAllAccounts(Session session) {
+        validateSession(session);
             return session.createQuery(
                             "SELECT a FROM Account a JOIN FETCH a.client", Account.class)
                     .getResultList();
     }
 
     public int getTotalAccountsCount(Session session) {
+        validateSession(session);
             return session.createQuery("SELECT COUNT(a) FROM Account a", Long.class)
                     .getSingleResult()
                     .intValue();
@@ -131,6 +134,7 @@ public class AccountService extends SessionService {
 
     private void checkAccountNumberUniqueness(Session session, String accountNumber)
             throws DuplicateAccountException {
+        validateSession(session);
         if (isAccountNumberExists(session, accountNumber)) {
             throw new DuplicateAccountException(accountNumber);
         }
@@ -160,6 +164,10 @@ public class AccountService extends SessionService {
             throws BankingOperationException {
         if (updated.getClient() == null) {
             throw new IllegalStateException("Клиент не может быть null");
+        }
+        if (existing.getBalance().compareTo(BigDecimal.ZERO) != 0 &&
+                !existing.getCurrency().equals(updated.getCurrency())) {
+            throw new InvalidCurrencyException("Нельзя менять валюту на не пустом счету");
         }
         validateBik(updated.getBik());
         validateAccountNumber(updated.getAccountNumber());

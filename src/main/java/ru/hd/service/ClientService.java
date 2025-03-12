@@ -7,9 +7,11 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.hd.exception.BankingOperationException;
+import ru.hd.exception.ClientNotFoundException;
 import ru.hd.exception.InvalidPhoneNumberException;
 import ru.hd.exception.InvalidTaxIdentifierException;
 import ru.hd.jpa.Client;
+import ru.hd.jpa.PassportScan;
 
 import java.util.List;
 
@@ -19,7 +21,7 @@ import static ru.hd.util.ValidationPattern.PHONE;
 public class ClientService extends SessionService {
     private static final Logger logger = LoggerFactory.getLogger(ClientService.class);
 
-    public Client createClient(Session session, Client client)
+    public Client createClient(Session session, Client client, byte[] fileBytes)
             throws BankingOperationException {
         validateSession(session);
         Transaction transaction = null;
@@ -28,9 +30,14 @@ public class ClientService extends SessionService {
             validateINN(client.getInn());
 
             transaction = session.beginTransaction();
+            if (fileBytes != null && fileBytes.length > 0) {
+                PassportScan passportScan = new PassportScan();
+                passportScan.setClient(client);
+                client.setPassportScan(passportScan);
+                passportScan.setScan(fileBytes);
+            }
             session.persist(client);
             transaction.commit();
-
             logger.info("Клиент успешно создан: fullName={}, phone={}", client.getFullName(), client.getPhoneNumber());
             return client;
         } catch (ConstraintViolationException e) {
@@ -43,16 +50,16 @@ public class ClientService extends SessionService {
         }
     }
 
-    public Client updateClient(Session session, Client updatedClient)
-            throws BankingOperationException {
+    public Client updateClientWithPassportScan(Session session, Client updatedClient, byte[] fileBytes) throws ClientNotFoundException, InvalidTaxIdentifierException, InvalidPhoneNumberException {
         validateSession(session);
         Transaction transaction = null;
         try {
+            transaction = session.beginTransaction();
+
             Client existingClient = session.get(Client.class, updatedClient.getId());
             if (existingClient == null) {
-                throw new RuntimeException("Клиент с ID " + updatedClient.getId() + " не найден");
+                throw new ClientNotFoundException(updatedClient.getId());
             }
-
             if (!existingClient.getPhoneNumber().equals(updatedClient.getPhoneNumber())) {
                 validatePhone(updatedClient.getPhoneNumber());
             }
@@ -60,21 +67,23 @@ public class ClientService extends SessionService {
                 validateINN(updatedClient.getInn());
             }
 
-            transaction = session.beginTransaction();
-
             existingClient.setFullName(updatedClient.getFullName());
             existingClient.setPhoneNumber(updatedClient.getPhoneNumber());
             existingClient.setInn(updatedClient.getInn());
             existingClient.setAddress(updatedClient.getAddress());
-            existingClient.setPassportScanCopy(updatedClient.getPassportScanCopy());
 
+            if (fileBytes != null && fileBytes.length > 0) {
+                PassportScan passportScan = existingClient.getPassportScan();
+                if (passportScan == null) {
+                    passportScan = new PassportScan();
+                    passportScan.setClient(existingClient);
+                    existingClient.setPassportScan(passportScan);
+                }
+                passportScan.setScan(fileBytes);
+            }
             session.merge(existingClient);
             transaction.commit();
-
-            logger.info("Клиент успешно обновлен: ID={}, fullName={}, phone={}",
-                    existingClient.getId(),
-                    existingClient.getFullName(),
-                    existingClient.getPhoneNumber());
+            logger.info("Клиент успешно обновлен: ID={}, fullName={}", existingClient.getId(), existingClient.getFullName());
             return existingClient;
         } catch (ConstraintViolationException e) {
             handleConstraintViolation(e, updatedClient);
@@ -92,20 +101,31 @@ public class ClientService extends SessionService {
     }
 
     public List<Client> getClients(Session session, int offset, int limit) {
-            return session.createQuery("FROM Client", Client.class)
-                    .setFirstResult(offset)
-                    .setMaxResults(limit)
-                    .getResultList();
+        validateSession(session);
+        return session.createQuery("FROM Client", Client.class)
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
     }
 
     public List<Client> getAllClients(Session session) {
-            return session.createQuery("FROM Client", Client.class).getResultList();
+        validateSession(session);
+        return session.createQuery("FROM Client", Client.class).getResultList();
     }
 
     public int getTotalClientsCount(Session session) {
-            return session.createQuery("SELECT COUNT(c) FROM Client c", Long.class)
-                    .getSingleResult()
-                    .intValue();
+        validateSession(session);
+        return session.createQuery("SELECT COUNT(c) FROM Client c", Long.class)
+                .getSingleResult()
+                .intValue();
+    }
+
+    public PassportScan initializePassportScan(Session session, Client client) {
+        Client existingClient = session.createQuery("SELECT c FROM Client c LEFT JOIN FETCH c.passportScan WHERE c.id = :id",
+                        Client.class)
+                .setParameter("id", client.getId())
+                .uniqueResult();
+        return existingClient != null ? existingClient.getPassportScan() : null;
     }
 
     private void validatePhone(String phone) throws InvalidPhoneNumberException {

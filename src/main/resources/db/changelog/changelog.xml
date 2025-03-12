@@ -7,4 +7,5 @@
 
     <include file="/db/changelog/v001/040325-01-initial-schema.xml" relativeToChangelogFile="false"/>
     <include file="/db/changelog/v001/040325-02-triggers.xml" relativeToChangelogFile="false"/>
+    <include file="/db/changelog/v001/110325-01-create-passport-scans-table.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

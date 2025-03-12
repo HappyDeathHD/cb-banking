@@ -118,6 +118,33 @@ public class TransactionService extends SessionService {
         }
     }
 
+    public List<TransactionRecord> getTransactions(Session session, int offset, int limit) {
+        validateSession(session);
+        return session.createQuery(
+                        "SELECT t FROM TransactionRecord t " +
+                                "LEFT JOIN FETCH t.fromAccount " +
+                                "LEFT JOIN FETCH t.toAccount", TransactionRecord.class)
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
+    }
+
+    public List<TransactionRecord> getAllTransactions(Session session) {
+        validateSession(session);
+        return session.createQuery(
+                        "SELECT t FROM TransactionRecord t " +
+                                "LEFT JOIN FETCH t.fromAccount " +
+                                "LEFT JOIN FETCH t.toAccount", TransactionRecord.class)
+                .getResultList();
+    }
+
+    public int getTotalTransactionsCount(Session session) {
+        validateSession(session);
+        return session.createQuery("SELECT COUNT(t) FROM TransactionRecord t", Long.class)
+                .getSingleResult()
+                .intValue();
+    }
+
     private void recordWithdrawTransaction(Session session, Account fromAccount, BigDecimal amount) {
         TransactionRecord transactionRecord = createWithdrawTransactionRecord(fromAccount, amount);
         session.persist(transactionRecord);
@@ -131,30 +158,6 @@ public class TransactionService extends SessionService {
                 .fromAccount(fromAccount)
                 .status(TransactionStatus.COMPLETED)
                 .build();
-    }
-
-    public List<TransactionRecord> getTransactions(Session session, int offset, int limit) {
-            return session.createQuery(
-                            "SELECT t FROM TransactionRecord t " +
-                                    "LEFT JOIN FETCH t.fromAccount " +
-                                    "LEFT JOIN FETCH t.toAccount", TransactionRecord.class)
-                    .setFirstResult(offset)
-                    .setMaxResults(limit)
-                    .getResultList();
-    }
-
-    public List<TransactionRecord> getAllTransactions(Session session) {
-            return session.createQuery(
-                            "SELECT t FROM TransactionRecord t " +
-                                    "LEFT JOIN FETCH t.fromAccount " +
-                                    "LEFT JOIN FETCH t.toAccount", TransactionRecord.class)
-                    .getResultList();
-    }
-
-    public int getTotalTransactionsCount(Session session) {
-            return session.createQuery("SELECT COUNT(t) FROM TransactionRecord t", Long.class)
-                    .getSingleResult()
-                    .intValue();
     }
 
     private Account getValidAccount(Session session, Long accountId)

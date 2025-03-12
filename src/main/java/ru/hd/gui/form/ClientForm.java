@@ -1,50 +1,53 @@
 package ru.hd.gui.form;
 
-import com.vaadin.flow.component.ComponentEvent;
-import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.binder.*;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import com.vaadin.flow.data.binder.Binder;
 import lombok.Getter;
 import ru.hd.jpa.Client;
 import ru.hd.util.ValidationPattern;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Stream;
 
 public class ClientForm extends FormLayout {
-    private final Binder<Client> binder = new Binder<>(Client.class);
-    private final Map<TextField, Binder.Binding<Client, ?>> bindings = new HashMap<>();
-    private Client client;
-
     private final TextField fullNameField = new TextField("ФИО");
     private final TextField phoneField = new TextField("Телефон");
     private final TextField innField = new TextField("ИНН");
     private final TextField addressField = new TextField("Адрес");
-    private final TextField passportField = new TextField("Скан паспорта");
-
+    private final Upload passportUpload = new Upload();
+    @Getter
+    private final MemoryBuffer memoryBuffer = new MemoryBuffer();
+    @Getter
+    private final Binder<Client> binder = new Binder<>(Client.class);
+    @Getter
+    private Client client;
+    @Getter
     private final Button saveButton = new Button("Сохранить");
 
     public ClientForm() {
         configureFields();
         configureBinder();
         setupLayout();
-        setupValidation();
+        configureUpload();
     }
 
     private void configureFields() {
-        Stream.of(fullNameField, phoneField, innField, addressField, passportField)
+        Stream.of(fullNameField, phoneField, innField, addressField)
                 .forEach(field -> {
                     field.setWidthFull();
                     field.setRequiredIndicatorVisible(true);
-                    field.addBlurListener(_ -> validateField(field));
                 });
+
+        passportUpload.setReceiver(memoryBuffer);
+        passportUpload.setWidthFull();
     }
 
     private void setupLayout() {
-        add(fullNameField, phoneField, innField, addressField, passportField, saveButton);
+        add(fullNameField, phoneField, innField, addressField, passportUpload, saveButton);
         setResponsiveSteps(
                 new ResponsiveStep("0", 1),
                 new ResponsiveStep("600px", 2)
@@ -53,76 +56,39 @@ public class ClientForm extends FormLayout {
     }
 
     private void configureBinder() {
-        bindings.put(fullNameField, binder.forField(fullNameField)
+        binder.forField(fullNameField)
                 .asRequired("ФИО обязательно")
-                .bind(Client::getFullName, Client::setFullName));
+                .bind(Client::getFullName, Client::setFullName);
 
-        bindings.put(phoneField, binder.forField(phoneField)
+        binder.forField(phoneField)
                 .asRequired("Телефон обязателен")
                 .withValidator(value -> ValidationPattern.PHONE.matcher(value).matches(),
                         "Формат: +7XXXXXXXXXX")
-                .bind(Client::getPhoneNumber, Client::setPhoneNumber));
+                .bind(Client::getPhoneNumber, Client::setPhoneNumber);
 
-        bindings.put(innField, binder.forField(innField)
+        binder.forField(innField)
                 .asRequired("ИНН обязателен")
                 .withValidator(value -> ValidationPattern.INN.matcher(value).matches(),
                         "ИНН должен содержать 12 цифр")
-                .bind(Client::getInn, Client::setInn));
+                .bind(Client::getInn, Client::setInn);
 
-        bindings.put(addressField, binder.forField(addressField)
+        binder.forField(addressField)
                 .asRequired("Адрес обязателен")
-                .bind(Client::getAddress, Client::setAddress));
-
-        bindings.put(passportField, binder.forField(passportField)
-                .asRequired("Скан паспорта обязателен")
-                .bind(Client::getPassportScanCopy, Client::setPassportScanCopy));
-
-        binder.addStatusChangeListener(_ ->
-                saveButton.setEnabled(binder.isValid() && binder.hasChanges()));
+                .bind(Client::getAddress, Client::setAddress);
     }
 
-    private void setupValidation() {
-        saveButton.addClickListener(_ -> {
-            if (binder.writeBeanIfValid(client)) {
-                fireEvent(new SaveEvent(this, client));
-            }
-        });
+    private void configureUpload() {
+        passportUpload.addSucceededListener(event -> Notification.show("Файл успешно загружен: " + event.getFileName()));
+
+        passportUpload.addFailedListener(_ -> Notification.show("Не удалось загрузить файл"));
     }
 
     public void setClient(Client client) {
         this.client = client;
         binder.readBean(client);
-    }
 
-    private void validateField(TextField field) {
-        Binder.Binding<Client, ?> binding = bindings.get(field);
-        if (binding != null) {
-            BindingValidationStatus<?> result = binding.validate();
-            field.setInvalid(result.isError());
-            result.getMessage().ifPresentOrElse(
-                    field::setErrorMessage,
-                    () -> field.setErrorMessage(null)
-            );
+        if (client.getPassportScan() != null) {
+            Notification.show("Скан паспорта уже загружен");
         }
-    }
-
-    @Getter
-    public static abstract class ClientFormEvent extends ComponentEvent<ClientForm> {
-        private final Client client;
-
-        protected ClientFormEvent(ClientForm source, Client client) {
-            super(source, false);
-            this.client = client;
-        }
-    }
-
-    public static class SaveEvent extends ClientFormEvent {
-        SaveEvent(ClientForm source, Client client) {
-            super(source, client);
-        }
-    }
-
-    public void addSaveListener(ComponentEventListener<SaveEvent> listener) {
-        addListener(SaveEvent.class, listener);
     }
 }

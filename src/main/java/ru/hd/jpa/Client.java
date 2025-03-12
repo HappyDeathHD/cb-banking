@@ -29,8 +29,10 @@ public class Client {
     @Column(nullable = false)
     private String address;
 
-    @Column(name = "passport_scan_copy", nullable = false)
-    private String passportScanCopy;
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "passport_scan_id")
+    @EqualsAndHashCode.Exclude
+    private PassportScan passportScan;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

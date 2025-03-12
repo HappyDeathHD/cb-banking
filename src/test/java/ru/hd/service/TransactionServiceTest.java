@@ -481,7 +481,6 @@ class TransactionServiceTest {
                 .phoneNumber(TestDataGenerator.generateUniquePhone())
                 .inn(TestDataGenerator.generateUniqueINN())
                 .address("ул. Тестовая, 1")
-                .passportScanCopy("scan.jpg")
                 .build();
 
         session.persist(client);
